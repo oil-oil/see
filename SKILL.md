@@ -1,72 +1,40 @@
 ---
 name: see
 description: >
-  Let AI see images and videos by converting them to text via ZenMux API (google/gemini-3-flash-preview).
-  Accepts local files OR URLs (image links, video links, webpages containing video).
+  Let AI see images and videos by converting visual media to text via ZenMux API.
+  Accepts local files OR URLs (image links, video links, webpages with embedded video).
   Supported formats: .png/.jpg/.jpeg/.webp/.gif/.mp4/.mov/.mkv/.webm and any URL.
-  Use when asked to view, describe, analyze, or extract info from any image or video content.
+  TRIGGER when: user asks to view/see/look at/describe/analyze/summarize any image or video,
+  user provides an image path or video path, user shares an image/video URL or a webpage URL
+  containing video (e.g. YouTube), user says "看看这个图/视频", "帮我看", "分析一下这个视频".
+  DO NOT TRIGGER when: user asks about text files, PDFs, or audio-only content.
 ---
 
-# Visual Media Parser
+# See
 
-Give AI the ability to see images and videos by converting them to text.
-
-## Rules
-
-- Only run `scripts/ask_media.sh`. Do not call ZenMux API directly.
-- Always write output to a file, then read that file.
-- If `ZENMUX_API_KEY` is missing, ask user to provide it.
-
-## Script
-
-```
-<skill-path>/scripts/ask_media.sh
-```
-
-Replace `<skill-path>` with the actual installed skill directory path.
+Run `scripts/ask_media.sh` to analyze visual media. Never call ZenMux API directly.
 
 ## Usage
 
-### Local image
-
 ```bash
-<skill-path>/scripts/ask_media.sh --task "describe this image" --image /path/to/image.png
+# Image
+scripts/ask_media.sh --task "describe this" --image /path/to/image.png
+
+# Multiple images
+scripts/ask_media.sh --task "compare these" --image /path/a.png --image /path/b.png
+
+# Video (auto-compresses if >45MB)
+scripts/ask_media.sh --task "summarize this video" --video /path/to/video.mp4
+
+# URL (image, video, or webpage with embedded video)
+scripts/ask_media.sh --task "what is this" "https://example.com/photo.jpg"
+scripts/ask_media.sh --task "summarize" "https://youtube.com/watch?v=xxx"
+
+# Custom output path
+scripts/ask_media.sh --task "describe" --image photo.png -o /tmp/result.md
 ```
 
-### Multiple images
-
-```bash
-<skill-path>/scripts/ask_media.sh --task "compare these two screenshots" --image /path/a.png --image /path/b.png
-```
-
-### Local video
-
-```bash
-<skill-path>/scripts/ask_media.sh --task "summarize this video" --video /path/to/video.mp4
-```
-
-### Image or video URL
-
-```bash
-<skill-path>/scripts/ask_media.sh --task "what is in this image" "https://example.com/photo.jpg"
-<skill-path>/scripts/ask_media.sh --task "describe this video" "https://example.com/clip.mp4"
-```
-
-### Webpage with embedded video (uses yt-dlp)
-
-```bash
-<skill-path>/scripts/ask_media.sh --task "summarize this video" "https://youtube.com/watch?v=xxx"
-```
-
-### Custom output path
-
-```bash
-<skill-path>/scripts/ask_media.sh --task "describe" --image photo.png -o /path/output.md
-```
-
-## Output
-
-On success, prints `output_path=<path>` to stdout. Read that file for the analysis text.
+On success, prints `output_path=<path>` to stdout. Read that file for the result.
 
 ## Options
 
@@ -76,25 +44,22 @@ On success, prints `output_path=<path>` to stdout. Read that file for the analys
 | `--image` | Image path/URL (repeatable) | |
 | `--video` | Video path/URL | |
 | positional args | Any file path or URL | |
-| `-o` | Output file path | `.runtime/visual-media-parser/<timestamp>.md` |
-| `--max-upload-mb` | Max video size before auto-compress | 45 |
+| `-o` | Output file path | `.runtime/see/<timestamp>.md` |
+| `--max-upload-mb` | Max size before compression | 45 |
 | `--model` | Model override | `google/gemini-3-flash-preview` |
+
+## API Key
+
+Lookup order: `ZENMUX_API_KEY` env var → `.env.local` in cwd/parents → `~/.config/see/api_key`. If missing, ask user.
 
 ## Dependencies
 
 - **python3**: required
-- **ffmpeg/ffprobe**: required for video compression (install: `brew install ffmpeg`)
-- **yt-dlp**: optional, for extracting video from webpages (install: `brew install yt-dlp`)
-
-## API Key
-
-Lookup order:
-1. `ZENMUX_API_KEY` env var
-2. `.env.local` in current/parent directories
-3. `~/.config/visual-media-parser/api_key`
+- **ffmpeg/ffprobe**: required for video (`brew install ffmpeg`)
+- **yt-dlp**: optional, for webpage video extraction (`brew install yt-dlp`)
 
 ## Workflow
 
 1. Convert user request into a `--task` sentence.
-2. Run the script with the appropriate input (file path, URL, or `--image`/`--video` flags).
+2. Run the script with file path, URL, or `--image`/`--video` flags.
 3. Read the output file and continue working with the parsed text.
